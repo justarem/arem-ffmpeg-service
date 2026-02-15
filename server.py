@@ -1,64 +1,105 @@
-from flask import Flask, request, send_file
-import subprocess
+import os
 import uuid
 import random
+import subprocess
+from flask import Flask, request, send_file
 
 app = Flask(__name__)
 
+# 20 VIRAL HOOKS (safe characters only)
 HOOKS = [
-    "POV: You just found an underrated Punjabi RnB singer",
-    "Punjabi love songs always hit different",
-    "This is what late night Punjabi feels like",
-    "If you miss someone, this one’s for you",
-    "Punjabi RnB > everything else",
-    "You weren’t ready for this Punjabi vibe",
-    "This singer deserves way more attention",
-    "That toxic love but make it Punjabi",
-    "This is not mainstream. This is special.",
-    "Underrated Punjabi music hits harder",
-    "POV: Your playlist just got better",
-    "When Punjabi meets RnB perfectly",
+    "POV - you just found an underrated Punjabi RnB singer",
+    "Punjabi love songs hit different at night",
+    "This Punjabi RnB voice deserves 1M views",
+    "Do not gatekeep this Punjabi singer",
+    "Why is nobody talking about Punjabi RnB like this",
+    "Late night Punjabi RnB just hits",
+    "This song belongs in your 2AM playlist",
+    "Underrated Punjabi RnB energy",
+    "You were not ready for this Punjabi vibe",
     "This one is for the hopeless romantics",
-    "You didn’t know you needed this song",
-    "Real Punjabi emotions only",
-    "This belongs in your late night drive playlist",
-    "Warning: You might replay this",
-    "If this hits, you have taste",
-    "Punjabi heartbreak never sounded this good",
-    "You found this before it blew up"
+    "Punjabi RnB is evolving",
+    "Play this when you miss her",
+    "Not your typical Punjabi song",
+    "This is what Punjabi RnB should sound like",
+    "This deserves to go viral",
+    "If you know you know",
+    "For the real Punjabi RnB fans",
+    "This voice is different",
+    "One listen will not be enough",
+    "Add this to your heartbreak playlist"
 ]
+
+
+def escape_text(text):
+    """
+    Escape characters that break ffmpeg drawtext
+    """
+    return (
+        text.replace("\\", "\\\\")
+            .replace(":", "\\:")
+            .replace("'", "\\'")
+            .replace(",", "\\,")
+            .replace("%", "\\%")
+    )
+
 
 @app.route("/", methods=["POST"])
 def process_video():
-    video = request.files["video"]
+    if "video" not in request.files:
+        return "No video file provided", 400
 
-    unique_id = str(uuid.uuid4())
-    input_file = f"{unique_id}_input.mp4"
-    output_file = f"{unique_id}_edited.mp4"
+    file = request.files["video"]
 
-    video.save(input_file)
+    # Unique filenames
+    input_filename = f"{uuid.uuid4()}_input.mp4"
+    output_filename = f"{uuid.uuid4()}_edited.mp4"
 
-    # 🎲 Pick random hook
-    hook_text = random.choice(HOOKS)
+    file.save(input_filename)
 
+    # Pick random hook
+    hook = random.choice(HOOKS)
+    hook = escape_text(hook)
+
+    # FFmpeg command
     command = [
         "ffmpeg",
         "-y",
-        "-i", input_file,
-        "-an",
+        "-i", input_filename,
+        "-an",  # remove audio
         "-vf",
-        f"drawtext=text='{hook_text}':fontcolor=white:fontsize=60:"
-        "box=1:boxcolor=black@0.6:boxborderw=20:"
-        "x=(w-text_w)/2:y=100",
+        f"drawtext=text='{hook}':"
+        f"fontsize=70:"
+        f"fontcolor=white:"
+        f"box=1:"
+        f"boxcolor=black@0.6:"
+        f"boxborderw=25:"
+        f"x=(w-text_w)/2:"
+        f"y=100",
         "-c:v", "libx264",
-        "-preset", "fast",
+        "-preset", "veryfast",
         "-crf", "23",
-        output_file
+        "-movflags", "+faststart",
+        output_filename
     ]
 
-    subprocess.run(command)
+    try:
+        subprocess.run(command, check=True)
+    except subprocess.CalledProcessError:
+        return "FFmpeg processing failed", 500
 
-    return send_file(output_file, as_attachment=True)
+    # Clean up input file
+    if os.path.exists(input_filename):
+        os.remove(input_filename)
+
+    return send_file(
+        output_filename,
+        as_attachment=True,
+        download_name="edited_video.mp4",
+        mimetype="video/mp4"
+    )
+
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8080)
+    port = int(os.environ.get("PORT", 8080))
+    app.run(host="0.0.0.0", port=port)
