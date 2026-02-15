@@ -13,17 +13,16 @@ def process_video():
     audio.save("music.mp3")
 
     command = [
-        "ffmpeg",
-        "-i", "input.mp4",
-        "-i", "music.mp3",
-        "-filter_complex",
-        "[0:a]volume=0[a0];[1:a]volume=0.01[a1];[a0][a1]amix=inputs=2[aout]",
-        "-map", "0:v",
-        "-map", "[aout]",
-        "-c:v", "copy",
-        "output.mp4"
-    ]
-
+    "ffmpeg",
+    "-i", "input.mp4",
+    "-i", "music.mp3",
+    "-map", "0:v:0",
+    "-map", "1:a:0",
+    "-c:v", "copy",
+    "-c:a", "aac",
+    "-shortest",
+    "output.mp4"
+]
     subprocess.run(command)
 
     return send_file("output.mp4", as_attachment=True)
