@@ -1,4 +1,4 @@
-from flask import Flask, request, send_file, jsonify
+from flask import Flask, request, send_file
 import subprocess
 import uuid
 import random
@@ -7,76 +7,76 @@ import os
 app = Flask(__name__)
 
 HOOKS = [
-    "POV: You just discovered an underrated Punjabi RnB singer",
-    "Punjabi love songs always hit different",
-    "This Punjabi vibe is dangerous",
-    "Late night Punjabi RnB feels",
-    "You weren’t ready for this Punjabi drop",
-    "This song deserves 10M streams",
-    "Punjabi heartbreak hits different",
-    "Your new favourite Punjabi song",
-    "Underrated Punjabi artist alert",
-    "Punjabi RnB season has started",
-    "This one is going on repeat",
-    "Don’t sleep on Punjabi RnB",
-    "This vibe is illegal",
-    "Punjabi songs for late drives",
-    "If you love Punjabi music, wait for this",
-    "You’ll replay this part",
-    "Hidden Punjabi gem",
-    "Punjabi + RnB = undefeated",
-    "This deserves more hype",
-    "Your playlist needs this"
+    "POV: You just discovered an underrated Punjabi R&B singer",
+    "Punjabi love songs hit different at night",
+    "This is your sign to update your Punjabi playlist",
+    "Underrated Punjabi R&B is a different vibe",
+    "Why does Punjabi R&B sound this addictive?",
+    "Late night drives need Punjabi R&B",
+    "This deserves way more streams",
+    "Punjabi heartbreak songs >>> everything",
+    "You weren’t supposed to find this",
+    "This artist is next up",
+    "Punjabi R&B but it actually hits",
+    "Don’t gatekeep this one",
+    "If you get it, you get it",
+    "This belongs on your repeat",
+    "Why is this not viral yet?",
+    "Found this and never recovered",
+    "Punjabi R&B is evolving",
+    "This song feels illegal to know",
+    "You’ll replay this. Watch.",
+    "This is your new obsession"
 ]
 
 @app.route("/", methods=["POST"])
 def process_video():
-    try:
-        video = request.files["video"]
+    if "video" not in request.files:
+        return "No video file provided", 400
 
-        input_filename = f"{uuid.uuid4()}.mp4"
-        output_filename = f"{uuid.uuid4()}_edited.mp4"
+    video = request.files["video"]
 
-        video.save(input_filename)
+    input_filename = f"{uuid.uuid4()}.mp4"
+    output_filename = f"{uuid.uuid4()}_edited.mp4"
 
-        hook = random.choice(HOOKS)
-        hook = hook.replace(":", "\\:").replace("'", "\\'")
+    video.save(input_filename)
 
-        command = [
-            "ffmpeg",
-            "-y",
-            "-i", input_filename,
-            "-vf",
-            f"drawtext=text='{hook}':"
-            f"fontsize=70:"
-            f"fontcolor=white:"
-            f"box=1:"
-            f"boxcolor=black@0.6:"
-            f"boxborderw=25:"
-            f"x=(w-text_w)/2:"
-            f"y=100",
-            "-an",
-            "-c:v", "libx264",
-            "-preset", "veryfast",
-            output_filename
-        ]
+    hook_text = request.form.get("hook")
 
-        result = subprocess.run(
-            command,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE
-        )
+    # If no hook passed → randomly pick one
+    if not hook_text or hook_text.strip() == "":
+        hook_text = random.choice(HOOKS)
 
-        if result.returncode != 0:
-            print("FFMPEG ERROR:")
-            print(result.stderr.decode())
-            return jsonify({"error": "FFmpeg failed"}), 500
+    drawtext = (
+        "drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:"
+        f"text='{hook_text}':"
+        "fontcolor=white:"
+        "fontsize=60:"
+        "box=1:"
+        "boxcolor=black@0.6:"
+        "boxborderw=20:"
+        "x=(w-text_w)/2:"
+        "y=150"
+    )
 
-        return send_file(output_filename, as_attachment=True)
+    command = [
+        "ffmpeg",
+        "-y",
+        "-i", input_filename,
+        "-an",
+        "-vf", drawtext,
+        "-c:v", "libx264",
+        "-preset", "fast",
+        "-crf", "23",
+        output_filename
+    ]
 
-    except Exception as e:
-        print("SERVER ERROR:", str(e))
-        return jsonify({"error": str(e)}), 500
+    subprocess.run(command, check=True)
+
+    if not os.path.exists(output_filename):
+        return "Video processing failed", 500
+
+    return send_file(output_filename, as_attachment=True)
 
 
 if __name__ == "__main__":
