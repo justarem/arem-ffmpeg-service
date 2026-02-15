@@ -63,8 +63,7 @@ def process_video():
         "-i", input_filename,
         "-an",
         "-vf",
-        f"drawtext=fontfile={font_path}:"
-        f"text='{hook}':"
+        f"drawtext=text='{hook}':"
         f"fontsize=70:"
         f"fontcolor=white:"
         f"box=1:"
