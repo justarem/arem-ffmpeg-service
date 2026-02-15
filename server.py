@@ -10,12 +10,13 @@ def process_video():
     video.save("input.mp4")
 
     command = [
-        "ffmpeg",
-        "-i", "input.mp4",
-        "-an",
-        "output.mp4"
-    ]
-
+    "ffmpeg",
+    "-y",  # ← ADD THIS
+    "-i", "input.mp4",
+    "-an",
+    "-c:v", "copy",
+    "output.mp4"
+]
     subprocess.run(command)
 
     return send_file("output.mp4", as_attachment=True)
