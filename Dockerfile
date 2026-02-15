@@ -11,3 +11,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 CMD ["python", "server.py"]
+RUN apt-get update && apt-get install -y \
+    ffmpeg \
+    fonts-dejavu-core
