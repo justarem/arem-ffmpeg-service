@@ -6,7 +6,6 @@ from flask import Flask, request, send_file
 
 app = Flask(__name__)
 
-# 20 VIRAL HOOKS (safe characters only)
 HOOKS = [
     "POV - you just found an underrated Punjabi RnB singer",
     "Punjabi love songs hit different at night",
@@ -32,9 +31,6 @@ HOOKS = [
 
 
 def escape_text(text):
-    """
-    Escape characters that break ffmpeg drawtext
-    """
     return (
         text.replace("\\", "\\\\")
             .replace(":", "\\:")
@@ -51,24 +47,24 @@ def process_video():
 
     file = request.files["video"]
 
-    # Unique filenames
-    input_filename = f"{uuid.uuid4()}_input.mp4"
+    input_filename = f"{uuid.uuid4()}.mp4"
     output_filename = f"{uuid.uuid4()}_edited.mp4"
 
     file.save(input_filename)
 
-    # Pick random hook
-    hook = random.choice(HOOKS)
-    hook = escape_text(hook)
+    hook = escape_text(random.choice(HOOKS))
 
-    # FFmpeg command
+    # IMPORTANT: specify Linux font path
+    font_path = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
+
     command = [
         "ffmpeg",
         "-y",
         "-i", input_filename,
-        "-an",  # remove audio
+        "-an",
         "-vf",
-        f"drawtext=text='{hook}':"
+        f"drawtext=fontfile={font_path}:"
+        f"text='{hook}':"
         f"fontsize=70:"
         f"fontcolor=white:"
         f"box=1:"
@@ -88,9 +84,7 @@ def process_video():
     except subprocess.CalledProcessError:
         return "FFmpeg processing failed", 500
 
-    # Clean up input file
-    if os.path.exists(input_filename):
-        os.remove(input_filename)
+    os.remove(input_filename)
 
     return send_file(
         output_filename,
